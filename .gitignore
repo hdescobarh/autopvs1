@@ -6,3 +6,11 @@ data/hg19.fa
 data/hg19.fa.fai
 data/hg38.fa
 data/hg38.fa.fai
+
+.venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/

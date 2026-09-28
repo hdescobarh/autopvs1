@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file.
 
 
+## 0.1.0 — Unreleased
+- Package the fork with uv, a lockfile, and a src layout; require Python 3.11+.
+- Move bundled maxentpy and pyhgvs into the private autopvs1._vendor namespace.
+- Require AUTOPVS1_CONFIG; resolve reference paths relative to that INI file,
+  expanding environment variables and home-directory paths.
+- Include vendor resources in distribution artifacts; keep reference datasets external.
+- Preserve public classes and import-time loading of both genome builds.
+- Add fixture-based import, configuration, and vendor-resource checks.
+
 ## 2021-06-30
 - Major update: Compatible with hg19/GRCh37 and hg38/GRCh38
 - VEP version upgrade to release/104

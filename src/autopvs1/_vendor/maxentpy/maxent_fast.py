@@ -10,7 +10,7 @@ applications to RNA splicing signals. Journal of Computational Biology,
 
 import sys
 import math
-from maxentpy._hashseq import hashseq
+from ._hashseq import hashseq
 import msgpack
 try:
     from string import maketrans

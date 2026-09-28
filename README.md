@@ -7,6 +7,67 @@ A web version for AutoPVS1 is also provided: http://autopvs1.genetics.bgi.com
 
 :art: **AutoPVS1** is now compatible with **hg19/GRCh37** and **hg38/GRCh38**.
 
+## Installation and local development
+
+Python 3.11 or newer and [uv](https://docs.astral.sh/uv/) are required for the
+following development workflow. From the repository root:
+
+```bash
+uv sync
+export AUTOPVS1_CONFIG="$PWD/config.ini"
+# Provision the reference genomes and configure VEP as described below, then:
+uv run python your_script.py
+```
+
+`uv sync` installs the package in editable mode. You can use
+`from autopvs1 import AutoPVS1` without changing `PYTHONPATH` or importing a
+source file directly. There is no native compilation step for normal use.
+`uv.lock` records the development dependency versions; use `uv sync --locked`
+to reproduce them.
+
+**Import still loads reference data for both hg19 and hg38.** Supply both FASTA
+files before importing, even when analyzing only one build. The other reference
+annotations are included in the checkout's `data/` directory. Constructing
+`AutoPVS1(...)` also runs the external `vep` executable, which must be on `PATH`
+and have the appropriate RefSeq cache and FASTA resources installed.
+
+### Configuration and wheel installations
+
+`AUTOPVS1_CONFIG` must explicitly select an INI file. No configuration is
+selected automatically from the checkout or working directory. The root
+`config.ini` is a template: retain its sections and keys, and set paths to your
+reference files and VEP cache. Environment variables and `~` are expanded;
+relative resource paths are resolved against the configuration file's directory.
+An absolute `AUTOPVS1_CONFIG` works independently of the script's working directory.
+Set it before the first import; changing it after import does not reload data.
+
+Build installable artifacts with:
+
+```bash
+uv build
+```
+
+The wheel includes Python source, vendored libraries, and MaxEnt scoring
+matrices. It excludes reference datasets, genome FASTAs, and VEP. Wheel users
+must obtain the matching reference annotations separately (for example, from
+this checkout), copy `config.ini` from the checkout or source distribution, and
+point its entries to those resources. In an existing virtual environment:
+
+```bash
+uv pip install /path/to/autopvs1-0.1.0-py3-none-any.whl
+export AUTOPVS1_CONFIG="/absolute/path/to/config.ini"
+python your_script.py
+```
+
+First-party code lives in `src/autopvs1/`; modified bundled dependencies live in
+its private `_vendor/` package. Their previous import locations are not retained.
+The optional MaxEnt C/Cython accelerator remains as source material and is not
+built or required.
+
+Run the packaging and configuration checks with `uv run pytest`. They use small
+synthetic reference fixtures and do not require VEP or downloaded genomes; they
+do not validate biological classifications.
+
 ## PREREQUISITE
 ### 1. Variant Effect Predictor (VEP)
 **AutoPVS1** use [VEP](https://asia.ensembl.org/info/docs/tools/vep/index.html) to determine the effect of 
@@ -34,17 +95,17 @@ FTP='ftp://ftp.ensembl.org/pub/'
 cd $HOME/.vep
 wget $FTP/release-${r}/variation/indexed_vep_cache/homo_sapiens_refseq_vep_${r}_GRCh38.tar.gz
 wget $FTP/release-${r}/variation/indexed_vep_cache/homo_sapiens_refseq_vep_${r}_GRCh37.tar.gz
-tar xzf homo_sapiens_vep_${r}_GRCh37.tar.gz
-tar xzf homo_sapiens_vep_${r}_GRCh38.tar.gz
+tar xzf homo_sapiens_refseq_vep_${r}_GRCh37.tar.gz
+tar xzf homo_sapiens_refseq_vep_${r}_GRCh38.tar.gz
 
 # fasta
 cd $HOME/.vep/homo_sapiens_refseq/${r}_GRCh37/
 wget $FTP/grch37/current/fasta/homo_sapiens/dna/Homo_sapiens.GRCh37.dna.primary_assembly.fa.gz
-tar xzf Homo_sapiens.GRCh37.dna.primary_assembly.fa.gz
+gunzip Homo_sapiens.GRCh37.dna.primary_assembly.fa.gz
 
 cd $HOME/.vep/homo_sapiens_refseq/${r}_GRCh38/
 wget $FTP/current_fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
-tar xzf Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+gunzip Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
 ```
 
 ### 2. pyfaidx
@@ -68,7 +129,7 @@ It is also included in the **autopvs1**.
 
 ### 5. Configuration
 
-`autopvs1/config.ini`
+`config.ini` at the repository root, selected with `AUTOPVS1_CONFIG`
 
 ```ini
 [DEFAULT]

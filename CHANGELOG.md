@@ -8,8 +8,13 @@ All notable changes to this project will be documented in this file.
 - Require AUTOPVS1_CONFIG; resolve reference paths relative to that INI file,
   expanding environment variables and home-directory paths.
 - Include vendor resources in distribution artifacts; keep reference datasets external.
-- Preserve public classes and import-time loading of both genome builds.
-- Add fixture-based import, configuration, and vendor-resource checks.
+- Preserve public classes and defer configuration and reference loading until use.
+- Support hg19-only and hg38-only installations with cached assembly bundles,
+  shared reference tables, and lazy compatibility aliases in read_data.
+- Reject unsupported assembly names consistently and report contextual reference
+  errors before launching VEP; failed loads can be retried.
+- Add synthetic import, configuration, resource-lifetime, analysis integration,
+  and vendor-resource checks.
 
 ## 2021-06-30
 - Major update: Compatible with hg19/GRCh37 and hg38/GRCh38

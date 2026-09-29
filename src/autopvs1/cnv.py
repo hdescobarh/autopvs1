@@ -7,9 +7,7 @@
 from collections import namedtuple
 from .strength import Strength
 from .utils import contained_in_bed
-from .read_data import pvs1_levels
-from .read_data import domain_hg19, hotspot_hg19, curated_region_hg19, exon_lof_popmax_hg19
-from .read_data import domain_hg38, hotspot_hg38, curated_region_hg38, exon_lof_popmax_hg38
+from .read_data import get_assembly_resources, get_shared_resources
 
 
 CNVRecord = namedtuple('CNVRecord', ('chrom', 'start', 'end', 'type'))
@@ -27,16 +25,12 @@ class PVS1CNV:
         self.consequence = consequence
         self.transcript = transcript
         
-        if genome_version in ['hg19', 'GRCh37']:
-            self.domain = domain_hg19
-            self.hotspot = hotspot_hg19
-            self.curated_region = curated_region_hg19
-            self.exon_lof_popmax = exon_lof_popmax_hg19
-        else:
-            self.domain = domain_hg38
-            self.hotspot = hotspot_hg38
-            self.curated_region = curated_region_hg38
-            self.exon_lof_popmax = exon_lof_popmax_hg38
+        resources = get_assembly_resources(genome_version)
+        self.domain = resources.domain
+        self.hotspot = resources.hotspot
+        self.curated_region = resources.curated_region
+        self.exon_lof_popmax = resources.exon_lof_popmax
+        self.pvs1_levels = get_shared_resources().pvs1_levels
 
         self.overlap_exon_index = []
         self.overlap_exon = []
@@ -96,12 +90,12 @@ class PVS1CNV:
             return Strength.Unmet
 
         gene_name = self.transcript.gene.name
-        if gene_name in pvs1_levels:
-            if pvs1_levels[gene_name] == 'L0':
+        if gene_name in self.pvs1_levels:
+            if self.pvs1_levels[gene_name] == 'L0':
                 return self.strength_raw
-            elif pvs1_levels[gene_name] == 'L1':
+            elif self.pvs1_levels[gene_name] == 'L1':
                 return self.strength_raw.downgrade(1)
-            elif pvs1_levels[gene_name] == 'L2':
+            elif self.pvs1_levels[gene_name] == 'L2':
                 return self.strength_raw.downgrade(2)
             else:
                 return Strength.Unmet

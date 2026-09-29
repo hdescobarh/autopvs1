@@ -10,8 +10,7 @@ from ._vendor.pyhgvs.models import Transcript
 from ._vendor.maxentpy import maxent
 from ._vendor.maxentpy.maxent import load_matrix5, load_matrix3
 from .utils import contained_in_bed
-from .read_data import genome_hg19, transcripts_hg19, domain_hg19, hotspot_hg19, curated_region_hg19
-from .read_data import genome_hg38, transcripts_hg38, domain_hg38, hotspot_hg38, curated_region_hg38
+from .read_data import get_assembly_resources
 
 
 matrix5 = load_matrix5()
@@ -33,22 +32,14 @@ class Splicing:
         self.alt = vcfrecord.alt
         self.transcript = transcript
         
-        if genome_version in ['hg19', 'GRCh37']:
-            self.genome_version = 'hg19'
-            self.vep_assembly = 'GRCh37'
-            self.genome = genome_hg19
-            self.transcripts = transcripts_hg19
-            self.domain = domain_hg19
-            self.hotspot = hotspot_hg19
-            self.curated_region = curated_region_hg19
-        else:
-            self.genome_version = 'hg38'
-            self.vep_assembly = 'GRCh38'
-            self.genome = genome_hg38
-            self.transcripts = transcripts_hg38
-            self.domain = domain_hg38
-            self.hotspot = hotspot_hg38
-            self.curated_region = curated_region_hg38
+        resources = get_assembly_resources(genome_version)
+        self.genome_version = resources.genome_version
+        self.vep_assembly = resources.vep_assembly
+        self.genome = resources.genome
+        self.transcripts = resources.transcripts
+        self.domain = resources.domain
+        self.hotspot = resources.hotspot
+        self.curated_region = resources.curated_region
 
         self.type = 'NA'
         self.index = 'NA'

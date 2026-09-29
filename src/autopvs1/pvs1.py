@@ -7,9 +7,7 @@ import re
 from .strength import Strength
 from .splicing import Splicing
 from .utils import contained_in_bed
-from .read_data import pvs1_levels
-from .read_data import genome_hg19, domain_hg19, hotspot_hg19, curated_region_hg19, exon_lof_popmax_hg19, pathogenic_hg19
-from .read_data import genome_hg38, domain_hg38, hotspot_hg38, curated_region_hg38, exon_lof_popmax_hg38, pathogenic_hg38
+from .read_data import get_assembly_resources, get_shared_resources
 
 
 class PVS1:
@@ -36,24 +34,16 @@ class PVS1:
         self.pHGVS = pHGVS
         self.transcript = transcript
 
-        if genome_version in ['hg19', 'GRCh37']:
-            self.genome_version = 'hg19'
-            self.vep_assembly = 'GRCh37'
-            self.genome = genome_hg19
-            self.domain = domain_hg19
-            self.hotspot = hotspot_hg19
-            self.curated_region = curated_region_hg19
-            self.exon_lof_popmax = exon_lof_popmax_hg19
-            self.pathogenic_dict = pathogenic_hg19
-        else:
-            self.genome_version = 'hg38'
-            self.vep_assembly = 'GRCh38'
-            self.genome = genome_hg38
-            self.domain = domain_hg38
-            self.hotspot = hotspot_hg38
-            self.curated_region = curated_region_hg38
-            self.exon_lof_popmax = exon_lof_popmax_hg38
-            self.pathogenic_dict = pathogenic_hg38
+        resources = get_assembly_resources(genome_version)
+        self.genome_version = resources.genome_version
+        self.vep_assembly = resources.vep_assembly
+        self.genome = resources.genome
+        self.domain = resources.domain
+        self.hotspot = resources.hotspot
+        self.curated_region = resources.curated_region
+        self.exon_lof_popmax = resources.exon_lof_popmax
+        self.pathogenic_dict = resources.pathogenic
+        self.pvs1_levels = get_shared_resources().pvs1_levels
 
         self.altcodon = 'na'
         self.init_path = 0
@@ -261,14 +251,14 @@ class PVS1:
                 return Strength.Moderate
             else:
                 return self.strength_raw
-        elif gene_name in pvs1_levels:
-            if pvs1_levels[gene_name] == 'L0':
+        elif gene_name in self.pvs1_levels:
+            if self.pvs1_levels[gene_name] == 'L0':
                 return self.strength_raw
-            elif pvs1_levels[gene_name] == 'L1':
+            elif self.pvs1_levels[gene_name] == 'L1':
                 return self.strength_raw.downgrade(1)
-            elif pvs1_levels[gene_name] == 'L2':
+            elif self.pvs1_levels[gene_name] == 'L2':
                 return self.strength_raw.downgrade(2)
-            elif pvs1_levels[gene_name] == 'L3':
+            elif self.pvs1_levels[gene_name] == 'L3':
                 return Strength.Unmet
             else:
                 return Strength.Unset

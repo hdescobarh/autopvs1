@@ -97,35 +97,32 @@ def create_bed_dict(bed):
     :return: bed dict
     """
     bed_dict = dict()
-    try:
-        with open(bed)as bed:
-            for line in bed:
-                record = line.strip().split("\t")
-                chrom = record[0]
-                if len(record) >= 12:
-                    block_count = record[9]
-                    block_sizes = record[10].split(",")
-                    block_starts = record[11].split(",")
-                    for i in range(int(block_count)):
-                        start = int(record[1]) + int(block_starts[i])
-                        end = start + int(block_sizes[i])
-                        key = record[3] + '|' + str(start) + '-' + str(end)
-                        create_two_dim_dict(bed_dict, key, "chrom", chrom)
-                        create_two_dim_dict(bed_dict, key, "start", int(start))
-                        create_two_dim_dict(bed_dict, key, "end", int(end))
-                else:
-                    start = int(record[1])
-                    end = int(record[2])
-                    if len(record) > 3:
-                        key = record[3]
-                    else:
-                        key = chrom + ":" + str(start) + "-" + str(end)
+    with open(bed)as bed:
+        for line in bed:
+            record = line.strip().split("\t")
+            chrom = record[0]
+            if len(record) >= 12:
+                block_count = record[9]
+                block_sizes = record[10].split(",")
+                block_starts = record[11].split(",")
+                for i in range(int(block_count)):
+                    start = int(record[1]) + int(block_starts[i])
+                    end = start + int(block_sizes[i])
+                    key = record[3] + '|' + str(start) + '-' + str(end)
                     create_two_dim_dict(bed_dict, key, "chrom", chrom)
                     create_two_dim_dict(bed_dict, key, "start", int(start))
                     create_two_dim_dict(bed_dict, key, "end", int(end))
-        return bed_dict
-    except Exception as e:
-        sys.stderr.write(str(e))
+            else:
+                start = int(record[1])
+                end = int(record[2])
+                if len(record) > 3:
+                    key = record[3]
+                else:
+                    key = chrom + ":" + str(start) + "-" + str(end)
+                create_two_dim_dict(bed_dict, key, "chrom", chrom)
+                create_two_dim_dict(bed_dict, key, "start", int(start))
+                create_two_dim_dict(bed_dict, key, "end", int(end))
+    return bed_dict
 
 
 def contained_in_bed(bed_dict, chrom, start, end):
@@ -182,31 +179,28 @@ def read_pathogenic_site(file):
     _pathogenic_dict = {}
     _pathogenic_dict['count'] = {}
     _pathogenic_dict['score'] = {}
-    try:
-        with open(file) as fh:
-            for line in fh:
-                if line.startswith("#"):
-                    continue
-                record = line.strip().split("\t")
-                key = record[0] + ':' + record[1]
-                if record[6] in ['4', '3', '2']:
-                    score = 1
-                elif record[6] == '1':
-                    score = 1/2
-                else:
-                    score = 1/3
+    with open(file) as fh:
+        for line in fh:
+            if line.startswith("#"):
+                continue
+            record = line.strip().split("\t")
+            key = record[0] + ':' + record[1]
+            if record[6] in ['4', '3', '2']:
+                score = 1
+            elif record[6] == '1':
+                score = 1/2
+            else:
+                score = 1/3
 
-                if key not in _pathogenic_dict['score']:
-                    _pathogenic_dict['score'][key] = score
-                else:
-                    _pathogenic_dict['score'][key] += score
+            if key not in _pathogenic_dict['score']:
+                _pathogenic_dict['score'][key] = score
+            else:
+                _pathogenic_dict['score'][key] += score
 
-                if key not in _pathogenic_dict['count']:
-                    _pathogenic_dict['count'][key] = 1
-                else:
-                    _pathogenic_dict['count'][key] += 1
-    except Exception as err:
-        sys.stderr.write(err)
+            if key not in _pathogenic_dict['count']:
+                _pathogenic_dict['count'][key] = 1
+            else:
+                _pathogenic_dict['count'][key] += 1
 
     return _pathogenic_dict
 
@@ -217,16 +211,13 @@ def read_pvs1_levels(file):
     :return: dict
     """
     _pvs1_levels = {}
-    try:
-        with open(file) as fh:
-            for line in fh:
-                record = line.strip().split("\t")
-                gene = record[0]
-                level = record[1]
-                if gene not in _pvs1_levels:
-                    _pvs1_levels[gene] = level
-    except Exception as err:
-        sys.stderr.write(err)
+    with open(file) as fh:
+        for line in fh:
+            record = line.strip().split("\t")
+            gene = record[0]
+            level = record[1]
+            if gene not in _pvs1_levels:
+                _pvs1_levels[gene] = level
 
     return _pvs1_levels
 
@@ -237,12 +228,9 @@ def read_gene_alias(file):
     :return: dict
     """
     _gene_alias = {}
-    try:
-        with open(file) as fh:
-            for line in fh:
-                record = line.strip().split("\t")
-                _gene_alias[record[1]] = record[0]
-    except Exception as err:
-        sys.stderr.write(err)
+    with open(file) as fh:
+        for line in fh:
+            record = line.strip().split("\t")
+            _gene_alias[record[1]] = record[0]
 
     return _gene_alias

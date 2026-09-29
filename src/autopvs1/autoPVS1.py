@@ -13,8 +13,7 @@ from collections import namedtuple
 
 from .pvs1 import PVS1
 from .cnv import PVS1CNV, CNVRecord
-from .read_data import trans_gene, gene_trans, gene_alias, vep_cache, vep_executable
-from .read_data import transcripts_hg19, transcripts_hg38, genome_hg19, genome_hg38
+from .read_data import get_assembly_resources, get_shared_resources, get_vep_settings, normalize_assembly
 from .utils import vep2vcf, get_transcript, vep_consequence_trans, VCFRecord
 
 
@@ -39,16 +38,11 @@ class AutoPVS1:
         self.vcfrecord = VCFRecord(self.chrom, self.pos, self.ref, self.alt)
         self.user_trans = user_trans
         
-        if genome_version in ['hg19', 'GRCh37']:
-            self.genome_version = 'hg19'
-            self.vep_assembly = 'GRCh37'
-        elif genome_version in ['hg38', 'GRCh38']:
-            self.genome_version = 'hg38'
-            self.vep_assembly = 'GRCh38'
-        else:
-            raise ValueError("Genome version must be hg19/GRCh37 or hg38/GRCh38.")
-            self.genome_version = 'hg38'
-            self.vep_assembly = 'GRCh38'
+        self.genome_version = normalize_assembly(genome_version)
+        self.resources = get_assembly_resources(self.genome_version)
+        self.vep_assembly = self.resources.vep_assembly
+        get_shared_resources()
+        get_vep_settings()
 
         self.id = id_generator()
         self.vep_input = '/tmp/vep.{0}.vcf'.format(self.id)
@@ -68,10 +62,7 @@ class AutoPVS1:
         self.vep_run()
         self.vep_filter()
 
-        if self.genome_version == 'hg19':
-            self.transcript = get_transcript(self.vep_trans, transcripts_hg19)
-        else:
-            self.transcript = get_transcript(self.vep_trans, transcripts_hg38)
+        self.transcript = get_transcript(self.vep_trans, self.resources.transcripts)
 
         self.consequence = vep_consequence_trans(self.vep_consequence)
         self.islof = self.consequence in lof_type
@@ -92,11 +83,12 @@ class AutoPVS1:
             raise TypeError("Wrong VCF Record")
 
     def vep_run(self):
+        settings = get_vep_settings()
         print(self.chrom, self.pos, '.', self.ref, self.alt, '.', 'PASS', ',',
               sep="\t", file=open(self.vep_input, 'w'))
         vepcommand = '''
-            ''' + shlex.quote(vep_executable) + ''' --offline --refseq --use_given_ref \
-            --dir_cache ''' + vep_cache + ''' \
+            ''' + shlex.quote(settings.executable) + ''' --offline --refseq --use_given_ref \
+            --dir_cache ''' + settings.cache + ''' \
             --species "homo_sapiens" \
             --assembly ''' + self.vep_assembly + ''' \
             --fork 4 \
@@ -115,6 +107,7 @@ class AutoPVS1:
         os.system(vepcommand)
 
     def vep_filter(self):
+        shared = get_shared_resources()
         var_dict = {}
         with open(self.vep_output) as fh:
             for line in fh:
@@ -127,11 +120,11 @@ class AutoPVS1:
                 records = line.strip().split("\t")
                 info = dict(zip(header, records))
                 if info['SYMBOL'] == '-':
-                    info['SYMBOL'] = trans_gene.get(info['Feature'], "NA")
+                    info['SYMBOL'] = shared.trans_gene.get(info['Feature'], "NA")
                 if info['SYMBOL'] == 'NA':
-                    info['SYMBOL'] = trans_gene.get(info['Feature'].split(".")[0], "NA")
-                if info['SYMBOL'] in gene_alias:
-                    info['SYMBOL'] = gene_alias.get(info['SYMBOL'])
+                    info['SYMBOL'] = shared.trans_gene.get(info['Feature'].split(".")[0], "NA")
+                if info['SYMBOL'] in shared.gene_alias:
+                    info['SYMBOL'] = shared.gene_alias.get(info['SYMBOL'])
                 var = VAR(info['Uploaded_variation'], info['SYMBOL'],
                           info['Feature'], info['CANONICAL'], info['PICK'], info)
                 if var.varid in var_dict:
@@ -142,8 +135,8 @@ class AutoPVS1:
         for varid in var_dict:
             final_choose = []
             for var_anno in var_dict[varid]:
-                if (gene_trans.get(var_anno.gene) == var_anno.trans or
-                    gene_trans.get(var_anno.gene, "na").split(".")[0] == var_anno.trans.split(".")[0]):
+                if (shared.gene_trans.get(var_anno.gene) == var_anno.trans or
+                    shared.gene_trans.get(var_anno.gene, "na").split(".")[0] == var_anno.trans.split(".")[0]):
                     final_choose.append(var_anno)
 
             final = ''
@@ -203,16 +196,11 @@ class AutoPVS1CNV:
         else:
             self.cnvtype = None
 
-        if genome_version in ['hg19', 'GRCh37']:
-            self.genome_version = 'hg19'
-            self.vep_assembly = 'GRCh37'
-        elif genome_version in ['hg38', 'GRCh38']:
-            self.genome_version = 'hg38'
-            self.vep_assembly = 'GRCh38'
-        else:
-            raise ValueError("wrong genome version, use hg38/GRCh38 by default")
-            self.genome_version = 'hg38'
-            self.vep_assembly = 'GRCh38'
+        self.genome_version = normalize_assembly(genome_version)
+        self.resources = get_assembly_resources(self.genome_version)
+        self.vep_assembly = self.resources.vep_assembly
+        get_shared_resources()
+        get_vep_settings()
 
         if self.cnvtype:
             self.cnvvariant = '-'.join([self.chrom, str(self.start), str(self.end), self.cnvtype])
@@ -233,19 +221,17 @@ class AutoPVS1CNV:
             self.vep_output = '/tmp/vep.{0}.tab'.format(self.id)
             self.vep_run()
             self.vep_filter()
-            if self.genome_version == 'hg19':
-                self.transcript = get_transcript(self.vep_trans, transcripts_hg19)
-            else:
-                self.transcript = get_transcript(self.vep_trans, transcripts_hg38)
+            self.transcript = get_transcript(self.vep_trans, self.resources.transcripts)
             self.pvs1 = self.runpvs1()
 
         os.system('rm ' + self.vep_input + ' ' + self.vep_output)
 
     def vep_run(self):
+        settings = get_vep_settings()
         print(self.chrom, self.start, self.end, self.cnvtype, file=open(self.vep_input, 'w'))
         vepcommand = '''
-            ''' + shlex.quote(vep_executable) + ''' --offline --refseq --use_given_ref \
-                --dir_cache ''' + vep_cache + ''' \
+            ''' + shlex.quote(settings.executable) + ''' --offline --refseq --use_given_ref \
+                --dir_cache ''' + settings.cache + ''' \
                 --species "homo_sapiens" \
                 --assembly ''' + self.vep_assembly + ''' \
                 --fork 1 \
@@ -263,6 +249,7 @@ class AutoPVS1CNV:
         os.system(vepcommand)
 
     def vep_filter(self):
+        shared = get_shared_resources()
         var_dict = {}
         with open(self.vep_output) as fh:
             for line in fh:
@@ -275,9 +262,9 @@ class AutoPVS1CNV:
                 records = line.strip().split("\t")
                 info = dict(zip(header, records))
                 if info['SYMBOL'] == '-':
-                    info['SYMBOL'] = trans_gene.get(info['Feature'], "-")
+                    info['SYMBOL'] = shared.trans_gene.get(info['Feature'], "-")
                 if info['SYMBOL'] == '-':
-                    info['SYMBOL'] = trans_gene.get(info['Feature'].split(".")[0], "NA")
+                    info['SYMBOL'] = shared.trans_gene.get(info['Feature'].split(".")[0], "NA")
                 var = VAR(info['Uploaded_variation'], info['SYMBOL'],
                           info['Feature'], info['CANONICAL'], info['PICK'], info)
                 if var.varid in var_dict:
@@ -288,12 +275,12 @@ class AutoPVS1CNV:
         for varid in var_dict:
             final_choose = []
             for var_anno in var_dict[varid]:
-                if gene_trans.get(var_anno.gene) == var_anno.trans:
+                if shared.gene_trans.get(var_anno.gene) == var_anno.trans:
                     final_choose.append(var_anno)
 
             if len(final_choose) == 0:
                 for var_anno in var_dict[varid]:
-                    if (gene_trans.get(var_anno.gene, "na").split(".")[0] ==
+                    if (shared.gene_trans.get(var_anno.gene, "na").split(".")[0] ==
                             var_anno.trans.split(".")[0]):
                         final_choose.append(var_anno)
 
@@ -334,7 +321,9 @@ class AutoPVS1CNV:
 
 
 def main():
-    genome_version = sys.argv[1]
+    genome_version = normalize_assembly(sys.argv[1])
+    resources = get_assembly_resources(genome_version)
+    get_shared_resources()
     anno_fh = open(sys.argv[2])
     header = list()
     for line in anno_fh:
@@ -350,12 +339,8 @@ def main():
         else:
             raise Exception("Inconsistent length for line and header!")
 
-        if genome_version == 'hg19':
-            vcfrecord = vep2vcf(info['Uploaded_variation'], genome_hg19)
-            transcript = get_transcript(info['Feature'], transcripts_hg19)
-        else:
-            vcfrecord = vep2vcf(info['Uploaded_variation'], genome_hg38)
-            transcript = get_transcript(info['Feature'], transcripts_hg38)
+        vcfrecord = vep2vcf(info['Uploaded_variation'], resources.genome)
+        transcript = get_transcript(info['Feature'], resources.transcripts)
         
         consequence = vep_consequence_trans(info['Consequence'])
         vcf_id = "-".join([vcfrecord.chrom, str(vcfrecord.pos), vcfrecord.ref, vcfrecord.alt])

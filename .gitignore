@@ -8,6 +8,8 @@ data/hg19.fa
 data/hg19.fa.fai
 data/hg38.fa
 data/hg38.fa.fai
+data/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna
+data/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.fai
 
 .venv/
 dist/

@@ -25,21 +25,47 @@ source file directly. There is no native compilation step for normal use.
 `uv.lock` records the development dependency versions; use `uv sync --locked`
 to reproduce them.
 
-**Import still loads reference data for both hg19 and hg38.** Supply both FASTA
-files before importing, even when analyzing only one build. The other reference
-annotations are included in the checkout's `data/` directory. Constructing
-`AutoPVS1(...)` also runs the external `vep` executable, located through `vep_executable` in the configuration (default: `vep` on `PATH`),
-and requires the appropriate RefSeq cache and FASTA resources installed.
+**Reference data loads only for the assembly you use.** An hg38-only setup needs
+only the hg38 FASTA and annotations; the hg19 section and files may be omitted.
+Importing `autopvs1` requires neither configuration nor external reference data.
+The reference annotations are included in the checkout's `data/` directory.
+Constructing `AutoPVS1(...)` or `AutoPVS1CNV(...)` loads the selected assembly and
+shared tables before running the external VEP executable. VEP requires the
+matching RefSeq cache and FASTA resources; `vep_executable` selects its location
+(default: `vep` on `PATH`).
 
 ### Configuration and wheel installations
 
-`AUTOPVS1_CONFIG` must explicitly select an INI file. No configuration is
-selected automatically from the checkout or working directory. The root
-`config.ini` is a template: retain its sections and keys, and set paths to your
-reference files and VEP cache. Environment variables and `~` are expanded;
-relative resource paths are resolved against the configuration file's directory.
-An absolute `AUTOPVS1_CONFIG` works independently of the script's working directory.
-Set it before the first import; changing it after import does not reload data.
+`AUTOPVS1_CONFIG` must explicitly select an INI file before the first analysis
+or resource access. No configuration is selected automatically from the checkout
+or working directory. The root `config.ini` is a template: retain `[DEFAULT]`
+and the section for each assembly you use, and set paths to your reference files
+and VEP cache. Environment variables and `~` are expanded; relative resource
+paths are resolved against the configuration file's directory. An absolute
+`AUTOPVS1_CONFIG` works independently of the script's working directory.
+
+Configuration is read on first use and retained for the process lifetime.
+Changing `AUTOPVS1_CONFIG` after that does not reload it. Shared tables and each
+assembly's complete reference bundle are cached separately. Both assemblies can
+be used in the same process, with `hg19`/`GRCh37` and `hg38`/`GRCh38` sharing their
+respective cached objects. Unsupported assembly names raise `ValueError`.
+
+Legacy access such as `read_data.genome_hg38` or
+`from autopvs1.read_data import genome_hg38` remains supported and loads the hg38
+bundle on demand. To load resources explicitly:
+
+```python
+from autopvs1.read_data import get_assembly_resources
+
+resources = get_assembly_resources("hg38")
+# resources.genome, resources.transcripts, resources.domain, etc.
+```
+
+Missing or malformed selected reference files raise
+`autopvs1.read_data.ResourceLoadError`, identifying the configuration entry and
+resolved path when available. Failed loads are not cached, so a corrected
+reference file can be retried. Shared reference tables load independently of
+assembly data, and VEP settings are resolved only for VEP-related operations.
 
 Build installable artifacts with:
 
@@ -64,15 +90,17 @@ its private `_vendor/` package. Their previous import locations are not retained
 The optional MaxEnt C/Cython accelerator remains as source material and is not
 built or required.
 
-Run the packaging and configuration checks with `uv run pytest`. They use small
-synthetic reference fixtures and do not require VEP or downloaded genomes; they
-do not validate biological classifications.
+Run the configuration, resource-loading, and analysis integration checks with
+`uv run pytest`. They use synthetic references and stubbed VEP execution, so no
+VEP installation or downloaded genomes are required. These software regression
+checks do not validate clinical accuracy.
 
 ## PREREQUISITE
 ### 1. Variant Effect Predictor (VEP)
 **AutoPVS1** use [VEP](https://asia.ensembl.org/info/docs/tools/vep/index.html) to determine the effect of 
 variants (SNVs, insertions, deletions, CNVs) on genes, transcripts, and protein sequence.
-To get HGVS name for the variant, indexed_vep_cache (homo_sapiens_refseq 104_GRCh37 and 104_GRCh38) and fasta files are required.
+To get HGVS names, install the indexed VEP cache and FASTA for the assembly you
+use: homo_sapiens_refseq 104_GRCh37 for hg19, or 104_GRCh38 for hg38.
 
 #### VEP Installation
 
@@ -129,7 +157,9 @@ It is also included in the **autopvs1**.
 
 ### 5. Configuration
 
-`config.ini` at the repository root, selected with `AUTOPVS1_CONFIG`
+Select your `config.ini` with `AUTOPVS1_CONFIG`. This complete hg38-only example
+omits `[HG19]`; the repository template includes both sections for users who
+need both assemblies.
 
 ```ini
 [DEFAULT]
@@ -138,15 +168,6 @@ vep_cache = $HOME/.vep
 pvs1levels = data/PVS1.level
 gene_alias = data/hgnc.symbol.previous.tsv
 gene_trans = data/clinvar_trans_stats.tsv
-
-[HG19]
-genome = data/hg19.fa
-transcript = data/ncbiRefSeq_hg19.gpe
-domain = data/functional_domains_hg19.bed
-hotspot = data/mutational_hotspots_hg19.bed
-curated_region = data/expert_curated_domains_hg19.bed
-exon_lof_popmax = data/exon_lof_popmax_hg19.bed
-pathogenic_site = data/clinvar_pathogenic_GRCh37.vcf
 
 [HG38]
 genome = data/hg38.fa
@@ -164,7 +185,8 @@ Environment variables and `~` are expanded; relative paths containing `/` are
 resolved against the INI directory. Bare names use `PATH`; omitting the setting
 defaults to `vep`.
 
-You can specify the vep cache directory to use, default is `$HOME/.vep/`
+Set `vep_cache` to your VEP cache directory; the repository template uses
+`$HOME/.vep/`. Download and index only the genome assemblies you use.
 
 **hg19.fa** is downloaded from UCSC [hg19.fa.gz](https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/) and indexed with `samtools faidx`
 

@@ -1,4 +1,10 @@
 # AutoPVS1
+
+> [!WARNING]
+> This fork is a small experiment. The refactoring was performed with AI assistance
+> and has not undergone detailed human review. It is not intended for real use,
+> including clinical decisions, research conclusions, or production workflows.
+
 An automatic classification tool for PVS1 interpretation of null variants.
 ![AutoPVS1](data/AutoPVS1.png)
 
@@ -196,8 +202,29 @@ Set `vep_cache` to your VEP cache directory; the repository template uses
 
 ## USAGE
 
+Install the package as described above, then select your configuration either
+with `export AUTOPVS1_CONFIG="/absolute/path/to/config.ini"` in the shell that
+launches Python or directly in your script as shown below. The Python setup is
+also useful when launching from an IDE that does not inherit the shell setting.
+Importing `AutoPVS1` does not require configuration, but constructing an analysis
+object does.
+
+This example assumes a configured `config.ini` beside your script. `setdefault`
+keeps an existing `AUTOPVS1_CONFIG` value; use `os.environ["AUTOPVS1_CONFIG"] = ...`
+instead if you intend to override it. Set the value before the first analysis or
+resource access, because configuration is cached after first use.
+
 ```python
+import os
+from pathlib import Path
+
 from autopvs1 import AutoPVS1
+
+os.environ.setdefault(
+    "AUTOPVS1_CONFIG",
+    str(Path(__file__).resolve().with_name("config.ini")),
+)
+
 demo = AutoPVS1('13-113803407-G-A', 'hg19')
 demo2 = AutoPVS1('13-113149093-G-A', 'hg38')
 if demo.islof:
@@ -207,6 +234,15 @@ if demo.islof:
 # GRCh37 and GRCh38 is also supported
 demo = AutoPVS1('13-113803407-G-A', 'GRCh37')
 demo2 = AutoPVS1('13-113149093-G-A', 'GRCh38')
+```
+
+In notebooks or an interactive Python session, `__file__` is unavailable. Use an
+explicit absolute path instead:
+
+```python
+import os
+
+os.environ.setdefault("AUTOPVS1_CONFIG", "/absolute/path/to/config.ini")
 ```
 
 ## FAQ

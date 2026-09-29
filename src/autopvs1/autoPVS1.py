@@ -7,12 +7,13 @@ import os
 import re
 import sys
 import random
+import shlex
 import string
 from collections import namedtuple
 
 from .pvs1 import PVS1
 from .cnv import PVS1CNV, CNVRecord
-from .read_data import trans_gene, gene_trans, gene_alias, vep_cache
+from .read_data import trans_gene, gene_trans, gene_alias, vep_cache, vep_executable
 from .read_data import transcripts_hg19, transcripts_hg38, genome_hg19, genome_hg38
 from .utils import vep2vcf, get_transcript, vep_consequence_trans, VCFRecord
 
@@ -94,7 +95,7 @@ class AutoPVS1:
         print(self.chrom, self.pos, '.', self.ref, self.alt, '.', 'PASS', ',',
               sep="\t", file=open(self.vep_input, 'w'))
         vepcommand = '''
-            vep --offline --refseq --use_given_ref \
+            ''' + shlex.quote(vep_executable) + ''' --offline --refseq --use_given_ref \
             --dir_cache ''' + vep_cache + ''' \
             --species "homo_sapiens" \
             --assembly ''' + self.vep_assembly + ''' \
@@ -243,7 +244,7 @@ class AutoPVS1CNV:
     def vep_run(self):
         print(self.chrom, self.start, self.end, self.cnvtype, file=open(self.vep_input, 'w'))
         vepcommand = '''
-            vep --offline --refseq --use_given_ref \
+            ''' + shlex.quote(vep_executable) + ''' --offline --refseq --use_given_ref \
                 --dir_cache ''' + vep_cache + ''' \
                 --species "homo_sapiens" \
                 --assembly ''' + self.vep_assembly + ''' \

@@ -28,8 +28,8 @@ to reproduce them.
 **Import still loads reference data for both hg19 and hg38.** Supply both FASTA
 files before importing, even when analyzing only one build. The other reference
 annotations are included in the checkout's `data/` directory. Constructing
-`AutoPVS1(...)` also runs the external `vep` executable, which must be on `PATH`
-and have the appropriate RefSeq cache and FASTA resources installed.
+`AutoPVS1(...)` also runs the external `vep` executable, located through `vep_executable` in the configuration (default: `vep` on `PATH`),
+and requires the appropriate RefSeq cache and FASTA resources installed.
 
 ### Configuration and wheel installations
 
@@ -133,6 +133,7 @@ It is also included in the **autopvs1**.
 
 ```ini
 [DEFAULT]
+vep_executable = vep
 vep_cache = $HOME/.vep
 pvs1levels = data/PVS1.level
 gene_alias = data/hgnc.symbol.previous.tsv
@@ -156,6 +157,12 @@ curated_region = data/expert_curated_domains_hg38.bed
 exon_lof_popmax = data/exon_lof_popmax_hg38.bed
 pathogenic_site = data/clinvar_pathogenic_GRCh38.vcf
 ```
+
+Set `vep_executable = /absolute/path/to/ensembl-vep/vep` to use a VEP installation
+outside `PATH`. Use the script path, without quotes or command-line arguments.
+Environment variables and `~` are expanded; relative paths containing `/` are
+resolved against the INI directory. Bare names use `PATH`; omitting the setting
+defaults to `vep`.
 
 You can specify the vep cache directory to use, default is `$HOME/.vep/`
 

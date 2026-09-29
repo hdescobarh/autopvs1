@@ -30,6 +30,16 @@ def _resource_path(section, key):
     return str(path.resolve())
 
 
+# Bare command names use PATH; paths are relative to the INI directory.
+vep_executable = os.path.expanduser(os.path.expandvars(
+    config.get('DEFAULT', 'vep_executable', fallback='vep')
+))
+if '/' in vep_executable:
+    executable_path = Path(vep_executable)
+    if not executable_path.is_absolute():
+        executable_path = config_path.parent / executable_path
+    vep_executable = str(executable_path.resolve())
+
 vep_cache = _resource_path('DEFAULT', 'vep_cache')
 
 pvs1_levels = read_pvs1_levels(_resource_path('DEFAULT', 'pvs1levels'))

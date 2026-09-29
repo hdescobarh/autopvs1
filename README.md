@@ -115,11 +115,40 @@ git clone https://github.com/Ensembl/ensembl-vep.git
 cd ensembl-vep
 git pull
 git checkout release/104
-perl INSTALL.pl
 ```
 
-#### VEP cache and faste files
-VEP cache and faste files can be automatically downloaded and configured using [INSTALL.pl](https://www.ensembl.org/info/docs/tools/vep/script/vep_download.html#installer). You can also download and set up them manually:
+AutoPVS1 supports human variants only, so restrict the installation to human
+resources with `-s homo_sapiens`. If you only need GRCh38, add `-y GRCh38` to
+select that assembly (use `-y GRCh37` for hg19).
+
+Choose one of the following installation commands:
+
+```bash
+# Install the VEP API, cache, and FASTA for human GRCh38.
+perl INSTALL.pl -a acf -s homo_sapiens -y GRCh38
+
+# Alternatively, install the VEP API and FASTA without downloading the cache.
+perl INSTALL.pl -a af -s homo_sapiens -y GRCh38
+```
+
+The `-a` option selects the installation steps: `a` installs the API, `c`
+downloads the cache, and `f` downloads the FASTA. Running `perl INSTALL.pl`
+without these options starts the interactive installer, including cache selection.
+See the [VEP installer documentation](https://www.ensembl.org/info/docs/tools/vep/script/vep_download.html#installer)
+for details.
+
+**AutoPVS1 requires the RefSeq cache.** To download it with the installer, use
+`-s homo_sapiens_refseq` in the cache-installing command above. Otherwise, use
+the manual RefSeq cache instructions below.
+
+VEP caches can exceed **10 GB**. For large downloads, we recommend downloading
+the cache separately with a tool that can resume interrupted transfers, such as
+`wget -c`, or resume and download in parallel chunks, such as `lftp` with
+`pget -c`. Use the `-a af` command above for this approach, then follow
+[VEP cache and FASTA files](#vep-cache-and-fasta-files) below to set up the cache.
+
+#### VEP cache and FASTA files
+VEP cache and FASTA files can be automatically downloaded and configured using [INSTALL.pl](https://www.ensembl.org/info/docs/tools/vep/script/vep_download.html#installer). You can also download and set them up manually:
 
 ```bash
 r=104
